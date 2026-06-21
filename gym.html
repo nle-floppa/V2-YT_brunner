@@ -36,7 +36,6 @@ const CONFIG = {
     { id: "lower", name: "Lower", drills: [] },
     { id: "full", name: "Full Body", drills: [] }
   ],
-
   // Split rotation — the order your training days cycle through. Use day
   // ids from `days` above, plus "rest" for off-days. The pill at the top
   // of the app reads this + splitAnchor to compute "what day is today".
@@ -72,12 +71,13 @@ const CONFIG = {
   //   day         — one of the day ids above
   //   repMin      — bottom of your target rep range
   //   repMax      — top of your target rep range
-  //   step        — how much weight you add when progressing (kg/lb)
+  //   step        — how much weight you add when progressing (lb)
   //   startWeight — starting weight (ignored when bw: true)
   //   bw          — true for bodyweight movements (logs reps only)
   //
   // First-run defaults. Once a user logs anything, they edit through
   // the in-app + / gear buttons; this block stays as the seed.
+  // Drills placeholder: add per‑day drill arrays here later
   defaultExercises: [
     // UPPER BODY DAY
     { name: "Bench Press",     gym: "home", day: "upper", repMin: 5, repMax: 8,  step: 2.5, startWeight: 45 },
