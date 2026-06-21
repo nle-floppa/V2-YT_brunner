@@ -18,38 +18,37 @@
      ============================================================= -->
 <script>
 const CONFIG = {
-  appTitle: "Progressive Overload Coach",
+  appTitle: "Brunner",
 
   // Weight unit shown everywhere. "kg" or "lb".
-  units: "kg",
+  units: "lb",
 
   // Gyms you train at. Add as many as you want.
   // `id` must be a short unique slug (no spaces). `name` is what people see.
   gyms: [
-    { id: "home",  name: "Home Gym" },
-    { id: "comm",  name: "Commercial Gym" }
+    { id: "home", name: "Home Gym" }
   ],
 
   // Training split. Most people use Push/Pull/Legs but you can rename
   // these to "Upper", "Lower", "Full Body", "Day A", anything.
   days: [
-    { id: "push", name: "Push" },
-    { id: "pull", name: "Pull" },
-    { id: "legs", name: "Legs" }
+    { id: "upper", name: "Upper", drills: [] },
+    { id: "lower", name: "Lower", drills: [] },
+    { id: "full", name: "Full Body", drills: [] }
   ],
 
   // Split rotation — the order your training days cycle through. Use day
   // ids from `days` above, plus "rest" for off-days. The pill at the top
   // of the app reads this + splitAnchor to compute "what day is today".
-  splitRotation: ["push", "pull", "legs", "rest"],
+  splitRotation: ["upper", "lower", "rest", "full", "rest", "rest", "rest"],
 
   // Anchor: pair a real calendar date with which split day fell on it.
   // The rotation advances from this point. Set `date` to a recent day
   // when you knew what split you were on, and `splitId` to that day.
   // Edit this if your split drifts.
   splitAnchor: {
-    date: "2026-05-12",
-    splitId: "rest"
+    date: "2026-06-15",
+    splitId: "upper"
   },
 
   // Progression rule: hit this many reps on the top set → coach tells you
@@ -80,15 +79,29 @@ const CONFIG = {
   // First-run defaults. Once a user logs anything, they edit through
   // the in-app + / gear buttons; this block stays as the seed.
   defaultExercises: [
-    { name: "Bench press",     gym: "comm", day: "push", repMin: 5, repMax: 8,  step: 2.5, startWeight: 60 },
-    { name: "Overhead press",  gym: "comm", day: "push", repMin: 5, repMax: 8,  step: 2.5, startWeight: 35 },
-    { name: "Tricep pushdown", gym: "comm", day: "push", repMin: 8, repMax: 12, step: 2.5, startWeight: 25 },
-    { name: "Pull-ups",        gym: "both", day: "pull", repMin: 5, repMax: 10, step: 1,   startWeight: 0, bw: true },
-    { name: "Barbell row",     gym: "comm", day: "pull", repMin: 6, repMax: 10, step: 2.5, startWeight: 50 },
-    { name: "Bicep curl",      gym: "comm", day: "pull", repMin: 8, repMax: 12, step: 1.25,startWeight: 15 },
-    { name: "Back squat",      gym: "comm", day: "legs", repMin: 5, repMax: 8,  step: 5,   startWeight: 80 },
-    { name: "Romanian deadlift", gym: "comm", day: "legs", repMin: 6, repMax: 10, step: 5, startWeight: 60 },
-    { name: "Leg press",       gym: "comm", day: "legs", repMin: 8, repMax: 12, step: 5,   startWeight: 100 }
+    // UPPER BODY DAY
+    { name: "Bench Press",     gym: "home", day: "upper", repMin: 5, repMax: 8,  step: 2.5, startWeight: 45 },
+    { name: "Overhead Press",  gym: "home", day: "upper", repMin: 5, repMax: 8,  step: 2.5, startWeight: 25 },
+    { name: "Pull-Ups",        gym: "home", day: "upper", repMin: 5, repMax: 10, step: 1,   startWeight: 0, bw: true },
+    { name: "Barbell Row",     gym: "home", day: "upper", repMin: 6, repMax: 10, step: 2.5, startWeight: 45 },
+    { name: "Dumbbell Curl",   gym: "home", day: "upper", repMin: 8, repMax: 12, step: 2.5, startWeight: 15 },
+    { name: "Tricep Extension",gym: "home", day: "upper", repMin: 8, repMax: 12, step: 2.5, startWeight: 20 },
+
+    // LOWER BODY DAY
+    { name: "Back Squat",      gym: "home", day: "lower", repMin: 5, repMax: 8,  step: 5,   startWeight: 65 },
+    { name: "Deadlift",        gym: "home", day: "lower", repMin: 1, repMax: 5,  step: 5,   startWeight: 65 },
+    { name: "Leg Press",       gym: "home", day: "lower", repMin: 8, repMax: 12, step: 5,   startWeight: 90 },
+    { name: "Lunges",          gym: "home", day: "lower", repMin: 8, repMax: 12, step: 2.5, startWeight: 20 },
+    { name: "Leg Curl",        gym: "home", day: "lower", repMin: 10,repMax: 15, step: 2.5, startWeight: 30 },
+    { name: "Calf Raise",      gym: "home", day: "lower", repMin: 12,repMax: 20, step: 2.5, startWeight: 20 },
+
+    // FULL BODY DAY
+    { name: "Clean and Press", gym: "home", day: "full", repMin: 3, repMax: 5,  step: 5,   startWeight: 45 },
+    { name: "Thrusters",       gym: "home", day: "full", repMin: 5, repMax: 8,  step: 2.5, startWeight: 35 },
+    { name: "Burpees",         gym: "home", day: "full", repMin: 5, repMax: 10, step: 1,   startWeight: 0, bw: true },
+    { name: "Kettlebell Swing",gym: "home", day: "full", repMin: 10,repMax: 15, step: 5,   startWeight: 25 },
+    { name: "Push-Ups",        gym: "home", day: "full", repMin: 8, repMax: 15, step: 1,   startWeight: 0, bw: true },
+    { name: "Bodyweight Row",  gym: "home", day: "full", repMin: 8, repMax: 12, step: 1,   startWeight: 0, bw: true }
   ]
 };
 </script>
