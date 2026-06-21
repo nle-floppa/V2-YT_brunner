@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Morning Routine</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #11151f;
+    --line: #1f2633;
+    --accent: #ff7a3d;
+    --accent-dim: #5a3a26;
+    --text: #e9edf5;
+    --text-dim: #7b859c;
+    --done: #2e7d5b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+    min-height: 100vh;
+  }
+  .wrap { width: 100%; max-width: 420px; }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 24px;
+    letter-spacing: -0.01em;
+  }
+
+  .stage {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 28px 20px;
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  .stage-label {
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .stage-name {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    min-height: 32px;
+  }
+  .clock {
+    font-size: 64px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 18px;
+  }
+  .clock.done { color: var(--done); }
+
+  .bar-track {
+    height: 6px;
+    background: var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s linear;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+  }
+  button {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 0;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--accent); color: #1a0f08; }
+  .btn-primary:disabled { background: var(--accent-dim); color: var(--text-dim); }
+  .btn-secondary { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+
+  .total {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 14px 0 22px;
+  }
+  .total span { color: var(--text); font-weight: 600; }
+
+  .list { display: flex; flex-direction: column; gap: 6px; }
+  .item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+  .item.active { border-color: var(--accent); }
+  .item.complete { opacity: 0.45; }
+  .item .num {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+  }
+  .item.active .num { background: var(--accent); color: #1a0f08; }
+  .item.complete .num { background: var(--done); color: #fff; }
+  .item .name { flex: 1; }
+  .item .dur { color: var(--text-dim); font-variant-numeric: tabular-nums; font-size: 13px; }
+
+  .reset-row {
+    text-align: center;
+    margin-top: 18px;
+  }
+  .reset-row button {
+    background: none;
+    color: var(--text-dim);
+    font-size: 13px;
+    text-decoration: underline;
+    padding: 4px;
+    width: auto;
+    flex: none;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Sequence</div>
+  <h1>Morning Routine</h1>
+
+  <div class="stage">
+    <div class="stage-label" id="stageLabel">Step 1 of 7</div>
+    <div class="stage-name" id="stageName">Wash face</div>
+    <div class="clock" id="clock">1:00</div>
+    <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+    <div class="controls">
+      <button class="btn-secondary" id="skipBtn">Skip</button>
+      <button class="btn-primary" id="startBtn">Start</button>
+    </div>
+  </div>
+
+  <div class="total">Elapsed <span id="elapsed">0:00</span> / Total <span id="totalTime">9:30</span></div>
+
+  <div class="list" id="list"></div>
+
+  <div class="reset-row"><button id="resetBtn">Reset sequence</button></div>
+</div>
+
+<script>
+const steps = [
+  { name: "Wash face", sec: 60 },
+  { name: "Caffeine serum", sec: 30 },
+  { name: "Niacinamide", sec: 30 },
+  { name: "Brush teeth", sec: 120 },
+  { name: "Morning moisturizer", sec: 30 },
+  { name: "Wet hair", sec: 60 },
+  { name: "Blow dry hair", sec: 210 },
+  { name: "Hair clay", sec: 60 },
+];
+
+let idx = 0;
+let remaining = steps[0].sec;
+let elapsedTotal = 0;
+let timer = null;
+let running = false;
+
+const totalSec = steps.reduce((a, s) => a + s.sec, 0);
+
+const stageLabel = document.getElementById('stageLabel');
+const stageName = document.getElementById('stageName');
+const clockEl = document.getElementById('clock');
+const barFill = document.getElementById('barFill');
+const startBtn = document.getElementById('startBtn');
+const skipBtn = document.getElementById('skipBtn');
+const resetBtn = document.getElementById('resetBtn');
+const elapsedEl = document.getElementById('elapsed');
+const totalTimeEl = document.getElementById('totalTime');
+const listEl = document.getElementById('list');
+
+function fmt(s) {
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return m + ":" + String(r).padStart(2, '0');
+}
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (e) {}
+}
+
+function renderList() {
+  listEl.innerHTML = '';
+  steps.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'item' + (i === idx ? ' active' : '') + (i < idx ? ' complete' : '');
+    div.innerHTML = `<div class="num">${i < idx ? '✓' : i + 1}</div><div class="name">${s.name}</div><div class="dur">${fmt(s.sec)}</div>`;
+    listEl.appendChild(div);
+  });
+}
+
+function renderStage() {
+  if (idx >= steps.length) {
+    stageLabel.textContent = 'Done';
+    stageName.textContent = 'All set 🎯';
+    clockEl.textContent = '0:00';
+    clockEl.classList.add('done');
+    barFill.style.width = '100%';
+    startBtn.disabled = true;
+    startBtn.textContent = 'Complete';
+    skipBtn.disabled = true;
+    return;
+  }
+  stageLabel.textContent = `Step ${idx + 1} of ${steps.length}`;
+  stageName.textContent = steps[idx].name;
+  clockEl.textContent = fmt(remaining);
+  const pct = ((steps[idx].sec - remaining) / steps[idx].sec) * 100;
+  barFill.style.width = pct + '%';
+  elapsedEl.textContent = fmt(elapsedTotal);
+}
+
+function tick() {
+  if (remaining > 0) {
+    remaining -= 1;
+    elapsedTotal += 1;
+    renderStage();
+  } else {
+    beep();
+    advance();
+  }
+}
+
+function advance() {
+  idx += 1;
+  renderList();
+  if (idx < steps.length) {
+    remaining = steps[idx].sec;
+    renderStage();
+  } else {
+    clearInterval(timer);
+    running = false;
+    renderStage();
+  }
+}
+
+startBtn.addEventListener('click', () => {
+  if (running) {
+    clearInterval(timer);
+    running = false;
+    startBtn.textContent = 'Resume';
+  } else {
+    running = true;
+    startBtn.textContent = 'Pause';
+    timer = setInterval(tick, 1000);
+  }
+});
+
+skipBtn.addEventListener('click', () => {
+  elapsedTotal += remaining;
+  remaining = 0;
+  advance();
+});
+
+resetBtn.addEventListener('click', () => {
+  clearInterval(timer);
+  running = false;
+  idx = 0;
+  remaining = steps[0].sec;
+  elapsedTotal = 0;
+  startBtn.disabled = false;
+  skipBtn.disabled = false;
+  startBtn.textContent = 'Start';
+  clockEl.classList.remove('done');
+  renderList();
+  renderStage();
+});
+
+totalTimeEl.textContent = fmt(totalSec);
+renderList();
+renderStage();
+</script>
+</body>
+</html>
