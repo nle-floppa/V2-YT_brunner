@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sync Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Sync Debug Test</h1>
+    <div id="status">Checking configuration...</div>
+    <div id="details"></div>
+    <button id="testPush">Test Push to Supabase</button>
+
+    <script>
+        // Test 1: Check if Vercel config loaded
+        const statusEl = document.getElementById('status');
+        const detailsEl = document.getElementById('details');
+
+        if (typeof window.DASH_SUPABASE_URL === 'undefined') {
+            statusEl.textContent = '❌ window.DASH_SUPABASE_URL not defined';
+            statusEl.style.color = 'red';
+        } else if (window.DASH_SUPABASE_URL === '') {
+            statusEl.textContent = '❌ SUPABASE_URL is empty';
+            statusEl.style.color = 'red';
+        } else if (window.DASH_SUPABASE_URL.indexOf('PASTE-') === 0) {
+            statusEl.textContent = '❌ SUPABASE_URL still contains PASTE- placeholder';
+            statusEl.style.color = 'red';
+        } else {
+            statusEl.textContent = '✅ SUPABASE_URL loaded';
+            statusEl.style.color = 'green';
+        }
+
+        // Test 2: Check key
+        if (typeof window.DASH_SUPABASE_KEY === 'undefined') {
+            statusEl.textContent += '\n❌ window.DASH_SUPABASE_KEY not defined';
+            statusEl.style.color = 'red';
+        } else if (window.DASH_SUPABASE_KEY === '') {
+            statusEl.textContent += '\n❌ SUPABASE_ANON_KEY is empty';
+            statusEl.style.color = 'red';
+        } else if (window.DASH_SUPABASE_KEY.indexOf('PASTE-') === 0) {
+            statusEl.textContent += '\n❌ SUPABASE_ANON_KEY still contains PASTE- placeholder';
+            statusEl.style.color = 'red';
+        } else {
+            statusEl.textContent += '\n✅ SUPABASE_ANON_KEY loaded';
+            statusEl.style.color = 'green';
+        }
+
+        // Test 3: Try to create supabase client
+        detailsEl.innerHTML = '<strong>Testing Supabase connection:</strong><br/>';
+        if (window.DASH_SUPABASE_URL && window.DASH_SUPABASE_KEY &&
+            !window.DASH_SUPABASE_URL.startsWith('PASTE') &&
+            !window.DASH_SUPABASE_KEY.startsWith('PASTE')) {
+
+            try {
+                const supabase = window.supabase.createClient(
+                    window.DASH_SUPABASE_URL,
+                    window.DASH_SUPABASE_KEY
+                );
+                detailsEl.innerHTML += '✅ Supabase client created<br/>';
+
+                // Test 4: Try to read from app_state
+                supabase.from('app_state').select('*').eq('key', 'po-coach').single()
+                    .then(({ data, error }) => {
+                        if (error) {
+                            detailsEl.innerHTML += `❌ Error reading from Supabase: ${error.message}<br/>`;
+                            detailsEl.innerHTML += `Make sure you ran the SQL setup in Supabase<br/>`;
+                        } else {
+                            detailsEl.innerHTML += `✅ Successfully read from app_state<br/>`;
+                            detailsEl.innerHTML += `Data keys: ${Object.keys(data || {}).join(', ')}<br/>`;
+                        }
+                    })
+                    .catch(err => {
+                        detailsEl.innerHTML += `❌ Exception: ${err.message}<br/>`;
+                    });
+
+            } catch (e) {
+                detailsEl.innerHTML += `❌ Failed to create Supabase client: ${e.message}<br/>`;
+            }
+        } else {
+            detailsEl.innerHTML += '❌ Cannot test Supabase - missing or invalid credentials<br/>';
+        }
+
+        // Test 5: Test push functionality
+        document.getElementById('testPush').addEventListener('click', async () => {
+            if (!window.DASH_SUPABASE_URL || !window.DASH_SUPABASE_KEY) {
+                alert('Missing Supabase credentials');
+                return;
+            }
+
+            try {
+                const supabase = window.supabase.createClient(
+                    window.DASH_SUPABASE_URL,
+                    window.DASH_SUPABASE_KEY
+                );
+
+                const testData = {
+                    test: true,
+                    timestamp: new Date().toISOString(),
+                    from: 'sync-test.html'
+                };
+
+                const { error } = await supabase
+                    .from('app_state')
+                    .upsert({ key: 'sync-test', data: testData }, { onConflict: 'key' });
+
+                if (error) {
+                    alert(`Push failed: ${error.message}`);
+                } else {
+                    alert('✅ Test push successful! Check your Supabase table.');
+                }
+            } catch (e) {
+                alert(`Error: ${e.message}`);
+            }
+        });
+    </script>
+</body>
+</html>
