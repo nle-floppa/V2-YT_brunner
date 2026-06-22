@@ -25,6 +25,43 @@ console.log('[sync.js] Loading sync.js...');
   console.log('[sync.js] SUPABASE_URL:', SUPABASE_URL);
   console.log('[sync.js] SUPABASE_KEY set:', !!SUPABASE_KEY);
 
+  // Global state for all sync handlers
+  const syncHandlers = {};
+  let globalSuppressSync = false;
+  const origSet = localStorage.setItem.bind(localStorage);
+  const origRemove = localStorage.removeItem.bind(localStorage);
+
+  // Install global localStorage hooks IMMEDIATELY (synchronously)
+  console.log('[sync.js] Installing global localStorage hooks');
+  localStorage.setItem = function (k, v) {
+    console.log('[sync.js] localStorage.setItem intercepted:', k);
+    origSet(k, v);
+    if (!globalSuppressSync) {
+      // Trigger schedulePush on all registered handlers
+      for (const handlerId of Object.keys(syncHandlers)) {
+        const handler = syncHandlers[handlerId];
+        if (handler && handler.matches && handler.matches(k)) {
+          console.log('[sync.js] setItem matched handler:', handlerId, 'scheduling push');
+          if (handler.schedulePush) handler.schedulePush();
+        }
+      }
+    }
+  };
+
+  localStorage.removeItem = function (k) {
+    console.log('[sync.js] localStorage.removeItem intercepted:', k);
+    origRemove(k);
+    if (!globalSuppressSync) {
+      for (const handlerId of Object.keys(syncHandlers)) {
+        const handler = syncHandlers[handlerId];
+        if (handler && handler.matches && handler.matches(k)) {
+          console.log('[sync.js] removeItem matched handler:', handlerId, 'scheduling push');
+          if (handler.schedulePush) handler.schedulePush();
+        }
+      }
+    }
+  };
+
   window.initCloudSync = function (config) {
     const appKey = config && config.appKey;
     const syncedKeys = (config && config.syncedKeys) || [];
@@ -71,23 +108,11 @@ console.log('[sync.js] Loading sync.js...');
       return out;
     }
 
-    const origSet = localStorage.setItem.bind(localStorage);
-    const origRemove = localStorage.removeItem.bind(localStorage);
-    localStorage.setItem = function (k, v) {
-      console.log('[sync.js] localStorage.setItem intercepted:', k, 'matches:', matches(k));
-      origSet(k, v);
-      try { if (!suppressSync && matches(k)) { console.log('[sync.js] scheduling push for setItem'); schedulePush(); } } catch (e) { console.error('[sync.js] setItem error:', e); }
-    };
-    localStorage.removeItem = function (k) {
-      console.log('[sync.js] localStorage.removeItem intercepted:', k, 'matches:', matches(k));
-      origRemove(k);
-      try { if (!suppressSync && matches(k)) { console.log('[sync.js] scheduling push for removeItem'); schedulePush(); } } catch (e) { console.error('[sync.js] removeItem error:', e); }
-    };
-
     function applyRemote(remote) {
       if (!remote || typeof remote !== 'object') { console.log('[sync.js] applyRemote: invalid remote'); return false; }
       console.log('[sync.js] applyRemote called with keys:', Object.keys(remote));
       suppressSync = true;
+      globalSuppressSync = true;
       let changed = false;
       try {
         for (const k of Object.keys(remote)) {
@@ -105,7 +130,10 @@ console.log('[sync.js] Loading sync.js...');
             try { origRemove(k); changed = true; } catch (e) { console.error('[sync.js] applyRemote: error removing key:', k, e); }
           }
         }
-      } finally { suppressSync = false; }
+      } finally { 
+        suppressSync = false;
+        globalSuppressSync = false;
+      }
       if (changed && typeof onApplied === 'function') {
         console.log('[sync.js] applyRemote: calling onApplied callback');
         try { onApplied(); } catch (e) { console.error('[sync.js] applyRemote: onApplied error:', e); }
@@ -207,5 +235,12 @@ console.log('[sync.js] Loading sync.js...');
       console.log('[sync.js] storage event:', e.key, 'matches:', matches(e.key));
       if (e.key && matches(e.key)) schedulePush();
     });
+
+    // Register this handler in the global registry so the global hooks can trigger it
+    console.log('[sync.js] Registering handler for appKey:', appKey);
+    syncHandlers[appKey] = {
+      matches: matches,
+      schedulePush: schedulePush
+    };
   };
 })();
