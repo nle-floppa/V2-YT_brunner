@@ -10,25 +10,36 @@
 //   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 //   <script src="sync.js" defer></script>
 // =============================================================
+console.log('[sync.js] Loading sync.js...');
+
 (function () {
   'use strict';
+
+  console.log('[sync.js] IIFE started');
 
   // Prefer Vercel env vars (served via /api/config → window.DASH_*),
   // otherwise fall back to these defaults.
   const SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
   const SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  
+  console.log('[sync.js] SUPABASE_URL:', SUPABASE_URL);
+  console.log('[sync.js] SUPABASE_KEY set:', !!SUPABASE_KEY);
 
   window.initCloudSync = function (config) {
     const appKey = config && config.appKey;
     const syncedKeys = (config && config.syncedKeys) || [];
     const syncedPrefixes = (config && config.syncedPrefixes) || [];
     const onApplied = config && config.onApplied;
-    if (!appKey) return;
-    if (!window.supabase) return;
-    if (!SUPABASE_URL || !SUPABASE_KEY) return;
-    if (SUPABASE_URL.indexOf('PASTE-') === 0 || SUPABASE_KEY.indexOf('PASTE-') === 0) return;
+    
+    console.log('[sync.js] initCloudSync called for appKey:', appKey, { syncedKeys, syncedPrefixes });
+    
+    if (!appKey) { console.warn('[sync.js] No appKey provided'); return; }
+    if (!window.supabase) { console.warn('[sync.js] window.supabase not available'); return; }
+    if (!SUPABASE_URL || !SUPABASE_KEY) { console.warn('[sync.js] Missing SUPABASE_URL or SUPABASE_KEY'); return; }
+    if (SUPABASE_URL.indexOf('PASTE-') === 0 || SUPABASE_KEY.indexOf('PASTE-') === 0) { console.warn('[sync.js] SUPABASE credentials need to be configured'); return; }
 
-    let supa = null;
+    console.log('[sync.js] All checks passed, initializing cloud sync for:', appKey);
+
     let pushTimer = null;
     let suppressSync = false;
     let lastSyncedJson = null;

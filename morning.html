@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script src="/api/config"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Morning Routine</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
 <style>
   :root {
     --bg: #0b0e14;
@@ -188,6 +192,8 @@
 </div>
 
 <script>
+const MORNING_STATE_KEY = 'morning_state';
+
 const steps = [
   { name: "Wash face", sec: 60 },
   { name: "Caffeine serum", sec: 30 },
@@ -218,6 +224,7 @@ const elapsedEl = document.getElementById('elapsed');
 const totalTimeEl = document.getElementById('totalTime');
 const listEl = document.getElementById('list');
 
+// Helper functions
 function fmt(s) {
   const m = Math.floor(s / 60);
   const r = s % 60;
@@ -237,6 +244,32 @@ function beep() {
     osc.start();
     osc.stop(ctx.currentTime + 0.3);
   } catch (e) {}
+}
+
+// Persistence helpers
+function saveState() {
+  const state = {
+    idx,
+    remaining,
+    elapsedTotal,
+    running,
+  };
+  localStorage.setItem(MORNING_STATE_KEY, JSON.stringify(state));
+}
+
+function loadState() {
+  const saved = localStorage.getItem(MORNING_STATE_KEY);
+  if (saved) {
+    try {
+      const state = JSON.parse(saved);
+      idx = state.idx || 0;
+      remaining = state.remaining || steps[0].sec;
+      elapsedTotal = state.elapsedTotal || 0;
+      running = state.running || false;
+    } catch (e) {
+      // Ignore parse errors, use defaults
+    }
+  }
 }
 
 function renderList() {
@@ -274,6 +307,7 @@ function tick() {
     remaining -= 1;
     elapsedTotal += 1;
     renderStage();
+    saveState();
   } else {
     beep();
     advance();
@@ -291,6 +325,7 @@ function advance() {
     running = false;
     renderStage();
   }
+  saveState();
 }
 
 startBtn.addEventListener('click', () => {
@@ -323,11 +358,30 @@ resetBtn.addEventListener('click', () => {
   clockEl.classList.remove('done');
   renderList();
   renderStage();
+  saveState();
 });
 
 totalTimeEl.textContent = fmt(totalSec);
-renderList();
-renderStage();
+
+// Initialize from localStorage and set up cloud sync
+(function init() {
+  loadState();
+  renderList();
+  renderStage();
+  
+  // Set up cloud sync with Supabase
+  if (typeof initCloudSync !== 'function') return;
+  initCloudSync({
+    appKey: 'morning',
+    syncedKeys: [MORNING_STATE_KEY],
+    onApplied: () => {
+      // Reload state from localStorage when remote changes arrive
+      loadState();
+      renderList();
+      renderStage();
+    }
+  });
+})();
 </script>
 </body>
 </html>
