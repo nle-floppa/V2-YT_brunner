@@ -710,19 +710,14 @@ body::after {
     try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }
   }
   function storeSet(key, value) {
-    console.log('[main.html] storeSet called:', key);
     try { 
-      console.log('[main.html] calling localStorage.setItem for key:', key);
       localStorage.setItem(key, JSON.stringify(value)); 
-      console.log('[main.html] localStorage.setItem completed for key:', key);
     } catch (e) { console.error('[main.html] storeSet error:', e); }
     if (typeof key === 'string' && key.indexOf('goals:') === 0) {
-      console.log('[main.html] dispatching goals-changed event');
       window.dispatchEvent(new CustomEvent('goals-changed'));
     }
     // Notify sync.js that this key changed
     if (typeof window.notifySync === 'function') {
-      console.log('[main.html] calling notifySync for key:', key);
       window.notifySync(key);
     }
   }
@@ -1259,20 +1254,15 @@ body::after {
 
   function makeAddHandlers(input, addBtn, polishBtn, key, statusEl, reload) {
     function plainAdd(text) {
-      console.log('[main.html] plainAdd called with text:', text, 'for key:', key);
       const list = getGoals(key);
-      console.log('[main.html] current list length:', list.length);
       list.push({ text, done: false });
-      console.log('[main.html] new list length:', list.length, 'calling setGoals');
       setGoals(key, list);
-      console.log('[main.html] setGoals completed, clearing input and reloading');
       input.value = '';
       reload();
     }
     addBtn.addEventListener('click', () => {
       const text = input.value.trim();
-      console.log('[main.html] add button clicked, text:', text);
-      if (!text) { console.log('[main.html] text is empty, returning'); return; }
+      if (!text) return;
       plainAdd(text);
     });
     input.addEventListener('keydown', (e) => {

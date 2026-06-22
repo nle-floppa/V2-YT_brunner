@@ -10,20 +10,14 @@
 //   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 //   <script src="sync.js" defer></script>
 // =============================================================
-console.log('[sync.js] Loading sync.js...');
 
 (function () {
   'use strict';
-
-  console.log('[sync.js] IIFE started');
 
   // Prefer Vercel env vars (served via /api/config → window.DASH_*),
   // otherwise fall back to these defaults.
   const SUPABASE_URL = (typeof window !== 'undefined' && window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
   const SUPABASE_KEY = (typeof window !== 'undefined' && window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
-  
-  console.log('[sync.js] SUPABASE_URL:', SUPABASE_URL);
-  console.log('[sync.js] SUPABASE_KEY set:', !!SUPABASE_KEY);
 
   // Global state for all sync handlers
   const syncHandlers = {};
@@ -32,16 +26,13 @@ console.log('[sync.js] Loading sync.js...');
   const origRemove = localStorage.removeItem.bind(localStorage);
 
   // Install global localStorage hooks IMMEDIATELY (synchronously)
-  console.log('[sync.js] Installing global localStorage hooks');
   localStorage.setItem = function (k, v) {
-    console.log('[sync.js] localStorage.setItem intercepted:', k);
     origSet(k, v);
     if (!globalSuppressSync) {
       // Trigger schedulePush on all registered handlers
       for (const handlerId of Object.keys(syncHandlers)) {
         const handler = syncHandlers[handlerId];
         if (handler && handler.matches && handler.matches(k)) {
-          console.log('[sync.js] setItem matched handler:', handlerId, 'scheduling push');
           if (handler.schedulePush) handler.schedulePush();
         }
       }
@@ -49,13 +40,11 @@ console.log('[sync.js] Loading sync.js...');
   };
 
   localStorage.removeItem = function (k) {
-    console.log('[sync.js] localStorage.removeItem intercepted:', k);
     origRemove(k);
     if (!globalSuppressSync) {
       for (const handlerId of Object.keys(syncHandlers)) {
         const handler = syncHandlers[handlerId];
         if (handler && handler.matches && handler.matches(k)) {
-          console.log('[sync.js] removeItem matched handler:', handlerId, 'scheduling push');
           if (handler.schedulePush) handler.schedulePush();
         }
       }
@@ -68,14 +57,10 @@ console.log('[sync.js] Loading sync.js...');
     const syncedPrefixes = (config && config.syncedPrefixes) || [];
     const onApplied = config && config.onApplied;
     
-    console.log('[sync.js] initCloudSync called for appKey:', appKey, { syncedKeys, syncedPrefixes });
-    
     if (!appKey) { console.warn('[sync.js] No appKey provided'); return; }
     if (!window.supabase) { console.warn('[sync.js] window.supabase not available'); return; }
     if (!SUPABASE_URL || !SUPABASE_KEY) { console.warn('[sync.js] Missing SUPABASE_URL or SUPABASE_KEY'); return; }
     if (SUPABASE_URL.indexOf('PASTE-') === 0 || SUPABASE_KEY.indexOf('PASTE-') === 0) { console.warn('[sync.js] SUPABASE credentials need to be configured'); return; }
-
-    console.log('[sync.js] All checks passed, initializing cloud sync for:', appKey);
 
     let supa = null;
     let pushTimer = null;
@@ -109,24 +94,21 @@ console.log('[sync.js] Loading sync.js...');
     }
 
     function applyRemote(remote) {
-      if (!remote || typeof remote !== 'object') { console.log('[sync.js] applyRemote: invalid remote'); return false; }
-      console.log('[sync.js] applyRemote called with keys:', Object.keys(remote));
+      if (!remote || typeof remote !== 'object') { return false; }
       suppressSync = true;
       globalSuppressSync = true;
       let changed = false;
       try {
         for (const k of Object.keys(remote)) {
-          if (!matches(k)) { console.log('[sync.js] applyRemote: skipping non-matching key:', k); continue; }
+          if (!matches(k)) continue;
           const incoming = JSON.stringify(remote[k]);
           const local = localStorage.getItem(k);
           if (local !== incoming) {
-            console.log('[sync.js] applyRemote: updating key:', k);
             try { origSet(k, incoming); changed = true; } catch (e) { console.error('[sync.js] applyRemote: error setting key:', k, e); }
           }
         }
         for (const k of listAllKeys()) {
           if (!(k in remote)) {
-            console.log('[sync.js] applyRemote: removing key:', k);
             try { origRemove(k); changed = true; } catch (e) { console.error('[sync.js] applyRemote: error removing key:', k, e); }
           }
         }
@@ -135,26 +117,22 @@ console.log('[sync.js] Loading sync.js...');
         globalSuppressSync = false;
       }
       if (changed && typeof onApplied === 'function') {
-        console.log('[sync.js] applyRemote: calling onApplied callback');
         try { onApplied(); } catch (e) { console.error('[sync.js] applyRemote: onApplied error:', e); }
       }
       return changed;
     }
 
     async function pushNow() {
-      if (!supa) { console.log('[sync.js] pushNow: supa not ready'); return; }
+      if (!supa) return;
       const state = collect();
       const json = JSON.stringify(state);
-      console.log('[sync.js] pushNow: collected state:', Object.keys(state), 'json length:', json.length);
-      if (json === lastSyncedJson) { console.log('[sync.js] pushNow: no changes since last sync'); return; }
+      if (json === lastSyncedJson) return;
       try {
-        console.log('[sync.js] pushNow: upserting to Supabase appKey:', appKey);
         const { error } = await supa.from('app_state').upsert(
           { key: appKey, data: state, updated_at: new Date().toISOString() },
           { onConflict: 'key' }
         );
         if (!error) {
-          console.log('[sync.js] pushNow: upsert successful');
           lastSyncedJson = json;
         } else {
           console.error('[sync.js] pushNow: upsert error:', error);
@@ -162,7 +140,6 @@ console.log('[sync.js] Loading sync.js...');
       } catch (e) { console.error('[sync.js] pushNow: exception:', e); }
     }
     function schedulePush() {
-      console.log('[sync.js] schedulePush called');
       clearTimeout(pushTimer);
       pushTimer = setTimeout(pushNow, 250);
     }
@@ -187,28 +164,22 @@ console.log('[sync.js] Loading sync.js...');
     }
 
     (async function init() {
-      console.log('[sync.js] init starting for appKey:', appKey);
       supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      console.log('[sync.js] Supabase client created');
       try {
-        console.log('[sync.js] Fetching initial data from Supabase...');
         const { data, error } = await supa
           .from('app_state').select('data').eq('key', appKey).maybeSingle();
         if (error) {
           console.error('[sync.js] init: fetch error:', error);
         } else if (data && data.data && Object.keys(data.data).length > 0) {
-          console.log('[sync.js] init: fetched existing data, applying:', Object.keys(data.data));
           lastSyncedJson = JSON.stringify(data.data);
           applyRemote(data.data);
         } else {
-          console.log('[sync.js] init: no data in Supabase, pushing local if exists');
           if (Object.keys(collect()).length > 0) {
             schedulePush();
           }
         }
       } catch (e) { console.error('[sync.js] init: exception during fetch:', e); }
       
-      console.log('[sync.js] Subscribing to realtime changes...');
       supa.channel('app_state_' + appKey)
         .on('postgres_changes', {
           event: '*',
@@ -216,28 +187,22 @@ console.log('[sync.js] Loading sync.js...');
           table: 'app_state',
           filter: 'key=eq.' + appKey,
         }, (payload) => {
-          console.log('[sync.js] Received postgres_changes event:', payload);
-          if (!payload.new || !payload.new.data) { console.log('[sync.js] Ignoring event: no data'); return; }
+          if (!payload.new || !payload.new.data) return;
           const incoming = JSON.stringify(payload.new.data);
-          if (incoming === lastSyncedJson) { console.log('[sync.js] Ignoring event: same as last sync'); return; }
-          console.log('[sync.js] Applying remote changes from event');
+          if (incoming === lastSyncedJson) return;
           lastSyncedJson = incoming;
           applyRemote(payload.new.data);
         })
-        .subscribe((status) => {
-          console.log('[sync.js] Subscription status:', status);
-        });
+        .subscribe(() => {});
     })();
 
     window.addEventListener('beforeunload', flushOnUnload);
     window.addEventListener('pagehide', flushOnUnload);
     window.addEventListener('storage', (e) => {
-      console.log('[sync.js] storage event:', e.key, 'matches:', matches(e.key));
       if (e.key && matches(e.key)) schedulePush();
     });
 
     // Register this handler in the global registry so the global hooks can trigger it
-    console.log('[sync.js] Registering handler for appKey:', appKey);
     syncHandlers[appKey] = {
       matches: matches,
       schedulePush: schedulePush
@@ -246,11 +211,9 @@ console.log('[sync.js] Loading sync.js...');
 
   // Expose a global function that pages can call to notify sync about changes
   window.notifySync = function(key) {
-    console.log('[sync.js] notifySync called for key:', key);
     for (const handlerId of Object.keys(syncHandlers)) {
       const handler = syncHandlers[handlerId];
       if (handler && handler.matches && handler.matches(key)) {
-        console.log('[sync.js] notifySync: matched handler:', handlerId, 'calling schedulePush');
         if (handler.schedulePush) handler.schedulePush();
       }
     }
