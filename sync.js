@@ -243,4 +243,16 @@ console.log('[sync.js] Loading sync.js...');
       schedulePush: schedulePush
     };
   };
+
+  // Expose a global function that pages can call to notify sync about changes
+  window.notifySync = function(key) {
+    console.log('[sync.js] notifySync called for key:', key);
+    for (const handlerId of Object.keys(syncHandlers)) {
+      const handler = syncHandlers[handlerId];
+      if (handler && handler.matches && handler.matches(key)) {
+        console.log('[sync.js] notifySync: matched handler:', handlerId, 'calling schedulePush');
+        if (handler.schedulePush) handler.schedulePush();
+      }
+    }
+  };
 })();

@@ -720,8 +720,18 @@ body::after {
       console.log('[main.html] dispatching goals-changed event');
       window.dispatchEvent(new CustomEvent('goals-changed'));
     }
+    // Notify sync.js that this key changed
+    if (typeof window.notifySync === 'function') {
+      console.log('[main.html] calling notifySync for key:', key);
+      window.notifySync(key);
+    }
   }
-  function storeDelete(key) { try { localStorage.removeItem(key); } catch (e) {} }
+  function storeDelete(key) { 
+    try { localStorage.removeItem(key); } catch (e) {} 
+    if (typeof window.notifySync === 'function') {
+      window.notifySync(key);
+    }
+  }
   function storeListKeys(prefix) {
     const out = [];
     for (let i = 0; i < localStorage.length; i++) {
