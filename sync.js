@@ -40,6 +40,7 @@ console.log('[sync.js] Loading sync.js...');
 
     console.log('[sync.js] All checks passed, initializing cloud sync for:', appKey);
 
+    let supa = null;
     let pushTimer = null;
     let suppressSync = false;
     let lastSyncedJson = null;
